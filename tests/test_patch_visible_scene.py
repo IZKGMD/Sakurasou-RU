@@ -40,7 +40,10 @@ class Tests(unittest.TestCase):
     def test_reject_missing_dialogue(self):
         original,offset,_=example()
         damaged=bytearray(original)
-        damaged[offset:offset+3]=b"abc"
+        needle = "見事優勝したこのチームへ".encode("utf-8")
+        at = damaged.find(needle, offset)
+        self.assertNotEqual(at, -1)
+        damaged[at:at+len(needle)] = b"?" * len(needle)
         with self.assertRaises(ValueError):
             make_translated_ssb(bytes(damaged),offset)
 
