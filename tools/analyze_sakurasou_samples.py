@@ -52,7 +52,7 @@ def inspect(path: Path) -> dict:
         "header_hex": data[:32].hex(" "),
         "possible_signature": (
             "CMED" if data.startswith(b"CMED")
-            else "FNT" if data.startswith(b"FNT\\x00")
+            else "FNT" if data.startswith(b"FNT\x00")
             else "unknown"
         ),
         "zero_byte_percent": round(freq[0] * 100 / total, 2) if total else 0.0,
