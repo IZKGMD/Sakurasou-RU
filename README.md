@@ -81,3 +81,12 @@ Sakurasou-RU-starter/
 - [Eternal Nyaboron — Vita guide](https://eternalnyaboronofficial.weebly.com/vita-guide.html): расположение `data.cpk` в rePatch.
 - [CRI Pak Tools](https://github.com/esperknight/cripaktools): извлечение и замена файлов в CPK.
 - [ConsoleMods — Applying Vita ROM Patches](https://consolemods.org/wiki/Vita%3AApplying_ROM_Patches): принцип работы rePatch.
+## Новый этап: поиск сценариев PS Vita
+
+Для Windows: распакуйте проект, скопируйте собственный data.cpk в work/original/ и запустите RESEARCH_WINDOWS.bat.
+
+Если tools/bin/CriPakTool.exe пока отсутствует, скрипт остановится после проверки заголовка CPK. После добавления инструмента повторный запуск попробует извлечь архив в отдельную папку и сохранит work/reports/triage.json.
+
+Подробности: [инструкция исследования](docs/RESEARCH_WORKFLOW.md).
+
+**Это исследовательский набор, а не готовый декодер .ssb или русский патч.** Не публикуйте оригинальные файлы игры.
