@@ -30,8 +30,10 @@ if errorlevel 1 (
   exit /b 2
 )
 echo [2/3] Header looks like standard CRI CPK. Original remains unchanged.
-if not exist "tools\bin\CriPakTool.exe" (
-  echo [INFO] Place trusted CriPakTool.exe into tools\bin\, then run again.
+set "CPK_TOOL=tools\bin\CriPakTools.exe"
+if not exist "%CPK_TOOL%" set "CPK_TOOL=tools\bin\CriPakTool.exe"
+if not exist "%CPK_TOOL%" (
+  echo [INFO] Place trusted CriPakTools.exe into tools\bin\, then run again.
   echo Project: https://github.com/esperknight/CriPakTools
   pause
   exit /b 0
@@ -43,7 +45,7 @@ if exist "work\unpacked" (
     goto scan
   )
 )
-py -3 tools\extract_cpk.py "work\original\data.cpk" --tool "tools\bin\CriPakTool.exe" --output "work\unpacked"
+py -3 tools\extract_cpk.py "work\original\data.cpk" --tool "%CPK_TOOL%" --output "work\unpacked"
 if errorlevel 1 (pause & exit /b 1)
 :scan
 echo [3/3] Building resource metadata report...
