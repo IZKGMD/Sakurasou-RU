@@ -19,7 +19,7 @@ ux0:rePatch/PCSG00129/files/data.cpk
 ## Быстрый старт на Windows
 
 1. Установите Python 3.10+; эти скрипты не требуют сторонних библиотек Python.
-2. Подготовьте *собственную законно полученную копию* игры на прошитой Vita. Через VitaShell найдите каталог `ux0:app/PCSG00129/` (путь/структура могут различаться), используйте `Open decrypted` и перенесите оригинальный `data.cpk` на свой ПК по FTP. Если файла нет, изучите структуру без предположений о пути.
+2. Можно работать **полностью на Windows** с файлами собственной копии PS Vita-игры. Если каталог `Sakura-Sou no Pet na Kanojo (JPN)/app/PCSG00129/files/` уже есть на ПК, не требуется переносить игру на консоль. Важно отличать *распакованные* файлы NoNpDrm/PKG от *расшифрованных PFS*-файлов: первые могут оставаться зашифрованными. Сначала выполните диагностику заголовка (см. руководство ниже). При наличии законной лицензии и полных исходных файлов используйте [PSVita NPDRM Decryptor](https://github.com/SuleMareVientu/PSVitaNPDRMDecryptor), который принимает всю папку приложения и пишет результат в отдельное место.
 3. Поместите полученный файл в `work/original/data.cpk`. **Не загружайте его на GitHub!**
 4. Запустите:
 
@@ -27,9 +27,9 @@ ux0:rePatch/PCSG00129/files/data.cpk
 py -3 tools/scan_assets.py work/original/data.cpk --report work/reports/archive.json
 ```
 
-Это только проверит заголовок и составит отчёт о размере/контрольной сумме: **пока не извлекает** содержимое CPK.
+Скрипт составит отчёт о размере, контрольной сумме и наличии CPK-сигнатуры: **пока не извлекает** содержимое CPK.
 
-5. Для извлечения изучите [CriPakTools](https://github.com/esperknight/cripaktools) или [CriPakTools GUI](https://github.com/FFBE-JP-Translation/CriPakTools-GUI). Извлечённые файлы держите в `work/unpacked/`.
+5. Если `cpk_magic: false`, **не запускайте CriPakTools**: выполните `py -3 tools/diagnose_cpk.py work/original/data.cpk --report work/reports/header.json` и проверьте, не зашифрован ли файл. Для извлечения настоящего CPK изучите [CriPakTools](https://github.com/esperknight/cripaktools) или [CriPakTools GUI](https://github.com/FFBE-JP-Translation/CriPakTools-GUI). Извлечённые файлы держите в `work/unpacked/`.
 6. Выполните анализ списка файлов:
 
 ```powershell
