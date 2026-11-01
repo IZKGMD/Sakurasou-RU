@@ -5,7 +5,7 @@ echo Sakurasou-RU - PS Vita asset research (read only)
 echo.
 if not exist "work\original\data.cpk" (
   echo [ERROR] Missing work\original\data.cpk
-  echo Copy from your OWN game using VitaShell, Open decrypted, FTP.
+  echo Copy your own game via VitaShell Open decrypted, FTP.
   pause
   exit /b 1
 )
@@ -18,7 +18,18 @@ if errorlevel 1 (
 py -3 tools\scan_assets.py "work\original\data.cpk" --report "work\reports\archive.json"
 if errorlevel 1 (pause & exit /b 1)
 echo.
-echo CPK header checked. Next: CriPakTool.exe. No original game files were modified.
+echo [1/3] Checking CPK header...
+py -3 tools\diagnose_cpk.py "work\original\data.cpk" --report "work\reports\header.json"
+if errorlevel 1 (
+  echo.
+  echo [BLOCKED] Cannot extract: standard CRI CPK signature is absent at offset 0.
+  echo This is common with encrypted game file copies; the cause is not proven yet.
+  echo Copy again from the Open decrypted view in VitaShell, using FTP.
+  echo Send only work\reports\header.json for diagnosis. Keep DATA.CPK private.
+  pause
+  exit /b 2
+)
+echo [2/3] Header looks like standard CRI CPK. Original remains unchanged.
 if not exist "tools\bin\CriPakTool.exe" (
   echo [INFO] Place trusted CriPakTool.exe into tools\bin\, then run again.
   echo Project: https://github.com/esperknight/CriPakTools
@@ -35,9 +46,10 @@ if exist "work\unpacked" (
 py -3 tools\extract_cpk.py "work\original\data.cpk" --tool "tools\bin\CriPakTool.exe" --output "work\unpacked"
 if errorlevel 1 (pause & exit /b 1)
 :scan
+echo [3/3] Building resource metadata report...
 py -3 tools\triage_scripts.py "work\unpacked" --report "work\reports\triage.json"
 if errorlevel 1 (pause & exit /b 1)
 echo.
-echo Finished. Send work\reports\archive.json and triage.json for analysis.
-echo Never upload game resource files to a public repo.
+echo Finished. Send work\reports\header.json and triage.json for analysis.
+echo Never upload game resource files to a public repository.
 pause
