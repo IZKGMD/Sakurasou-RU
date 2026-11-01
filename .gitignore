@@ -34,3 +34,7 @@ __pycache__/
 *.pyc
 .DS_Store
 .vscode/
+
+# Third-party archive tools, user-local resources
+tools/bin/
+*.exe
