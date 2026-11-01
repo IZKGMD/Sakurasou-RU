@@ -20,3 +20,17 @@ py -3 tools/triage_scripts.py work/unpacked --report work/reports/triage.json
 - VitaShell Open decrypted: https://consolemods.org/wiki/Vita:Applying_ROM_Patches
 - CriPakTools: https://github.com/esperknight/CriPakTools
 - Sakurasou PSP file formats: https://gbatemp.net/threads/sakurasou-no-pet-na-kanojo-translating-open-txg-txgtl-etc.379085/
+
+## Если написано Not a recognisable CPK header
+
+Это означает только то, что файл **не начинается с байтов** `43 50 4B 20` (`CPK `). Проверка количества извлечённых текстовых файлов здесь ничего не говорит: сканировали единственный внешний архив.
+
+1. Проверьте, что игра ваша и запускается на самой PS Vita. Убедитесь, что архив взят из PS Vita PCSG00129, а не PSP.
+2. Откройте VitaShell на консоли и в `ux0:app/` **выделите каталог `PCSG00129`**, затем △ → Open decrypted. **Оставайтесь в этом режиме**.
+3. В VitaShell нажмите SELECT, предварительно выбрав FTP в настройках START, и перенесите `files/DATA.CPK` на ПК через FTP именно из открытого расшифрованного представления. Копирование microSD на ПК или распаковка PKG не гарантируют расшифровки PFS.
+4. Сохраните прежний локальный файл под другим именем и скопируйте новую версию в `work/original/data.cpk` — не меняйте оригинал на Vita.
+5. Повторно запустите `RESEARCH_WINDOWS.bat` (или `py -3 tools/diagnose_cpk.py work/original/data.cpk --report work/reports/header.json`). Если сигнатура опять не распознана, отправьте только `header.json` и способ получения файла для дальнейшего анализа.
+
+Отсутствие сигнатуры не доказывает PFS-шифрование: возможен иной контейнер или служебный заголовок. Не удаляйте первые байты вручную.
+
+Источник: [Vita3K — Using VitaShell to dump your own files](https://vita3k.org/quickstart); [VitaShell decrypted view](https://github.com/Cimmerian-Iter/Vita-troubleshooting-guide/blob/master/vitashell.md).
