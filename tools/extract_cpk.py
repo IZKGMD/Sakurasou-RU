@@ -18,7 +18,7 @@ def extract(cpk: Path, executable: Path, destination: Path, *, list_only=False):
         raise ValueError('Expected archive and executable files')
     with cpk.open('rb') as f:
         if f.read(4) != b'CPK ':
-            raise ValueError('Not a recognisable CPK header')
+            raise ValueError('Not a standard CPK at byte 0. This file may be encrypted (PS Vita PFS) or use another format. Run tools/diagnose_cpk.py and recopy through VitaShell Open decrypted + FTP. Original not modified.')
     if destination == cpk.parent or cpk.is_relative_to(destination):
         raise ValueError('Output folder must be separate from archive folder')
     if not list_only:
