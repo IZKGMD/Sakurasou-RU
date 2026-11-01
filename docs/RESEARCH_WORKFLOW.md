@@ -1,36 +1,55 @@
-# PS Vita game asset research workflow (PCSG00129)
+# Исследование PS Vita PCSG00129 полностью на ПК (Windows)
 
-1. Use VitaShell on **your own installed game**. In `ux0:app/PCSG00129`, highlight the directory, press Triangle > Open decrypted, and use VitaShell FTP to transfer only `data.cpk` into `work/original/data.cpk` on your computer.
-2. On Windows with Python 3.10+ installed, double-click `RESEARCH_WINDOWS.bat` to verify the archive header and save a SHA-256/size report.
-3. Download or compile `CriPakTool.exe` from https://github.com/esperknight/CriPakTools and put it in `tools/bin/`. Read the source and virus-scan any binaries you obtain from third parties. Do not run unknown downloads.
-4. Double-click `RESEARCH_WINDOWS.bat` again. The script will try to extract into **an empty** `work/unpacked/`, not modify the original, and write `work/reports/triage.json`. If extraction fails, leave original untouched and share only the error message.
-5. Share `work/reports/archive.json` and `work/reports/triage.json` in chat. Both reports intentionally omit game dialogue and assets. Do not publish `data.cpk` or extracted files to GitHub.
+**Для работы НЕ нужно устанавливать игру на PS Vita.** Если у вас уже есть папка:
+```text
+Sakura-Sou no Pet na Kanojo (JPN)/
+  app/PCSG00129/
+    eboot.bin
+    files/DATA.CPK
+    files/STRM.CPK
+    sce_sys/package/work.bin  # если эта лицензия присутствует у вашей копии
+```
+работайте с её копией на Windows. Не отправляйте игровые данные или лицензию в публичный репозиторий.
 
-The metadata scanner is NOT a decoder/rebuilder for `.ssb`. The file-format claims for `.ssb`, `.fnt`, `.cmed`, `.tipd`, `.tmd`, `.tskd` are based on a **PSP** reverse-engineering thread and must be verified on Vita. This research step only locates and fingerprints candidate files for later format analysis.
+## Шаг 1. Проверка заголовка файла
 
-## Manual commands
+1. Скопируйте DATA.CPK в work/original/data.cpk.
+2. Выполните:
 
 ```powershell
 py -3 tools/scan_assets.py work/original/data.cpk --report work/reports/archive.json
+py -3 tools/diagnose_cpk.py work/original/data.cpk --report work/reports/header.json
+```
+
+Нормальная CRI CPK-сигнатура начинается с `43 50 4B 20` (`CPK `). Если `cpk_magic: false` или `status: unknown_header_possibly_encrypted`, **не пытайтесь распаковать его через CriPakTools**: никакие диалоги пока не извлечены.
+
+## Шаг 2. Если PFS ещё зашифрован
+
+Обычная распаковка PKG/NoNpDrm не обязательно расшифровывает слой PFS. При наличии необходимых данных и лицензии от вашей законно полученной копии игры можно обработать папку приложения **целиком на ПК**:
+
+- [PSVita NPDRM Decryptor](https://github.com/SuleMareVientu/PSVitaNPDRMDecryptor) — Windows GUI; выберите исходный каталог приложения `app/PCSG00129`, назначьте отдельную выходную папку и запустите обработку. Утилита принимает папку игры, не отдельный CPK. Если исходные файлы неполные или лицензионных данных недостаточно, обработка может не сработать.
+- [psvpfstools](https://github.com/motoharu-gosuto/psvpfstools) — исходники самостоятельного PFS-дешифратора для ПК; сложнее в сборке.
+
+Не ищите чужие лицензии и не меняйте оригинальную папку. Получив результат, проверьте новый `files/DATA.CPK` через `diagnose_cpk.py`.
+
+**Если формат так и не распознан**, передайте только `work/reports/header.json`. Отсутствие сигнатуры само по себе **не доказывает** PFS-шифрование: архив может иметь нестандартную оболочку, формат или быть повреждён.
+
+## Шаг 3. Извлечение и анализ
+
+Когда заголовок действительно начинается с `CPK `, установите отдельно [CriPakTools](https://github.com/esperknight/CriPakTools). Положите доверенный `CriPakTool.exe` в `tools/bin/` и запустите `RESEARCH_WINDOWS.bat`. Скрипт попытается извлечь файлы только в пустую папку `work/unpacked/` и создать `work/reports/triage.json`.
+
+```powershell
 py -3 tools/extract_cpk.py work/original/data.cpk --tool tools/bin/CriPakTool.exe --output work/unpacked
 py -3 tools/triage_scripts.py work/unpacked --report work/reports/triage.json
 ```
 
-**Source references**:
-- VitaShell Open decrypted: https://consolemods.org/wiki/Vita:Applying_ROM_Patches
-- CriPakTools: https://github.com/esperknight/CriPakTools
-- Sakurasou PSP file formats: https://gbatemp.net/threads/sakurasou-no-pet-na-kanojo-translating-open-txg-txgtl-etc.379085/
+Диагностический инструмент не умеет декодировать `.ssb` и не утверждает, что форматы PSP непременно совпадают с Vita.
 
-## Если написано Not a recognisable CPK header
+## Шаг 4. Тестирование
 
-Это означает только то, что файл **не начинается с байтов** `43 50 4B 20` (`CPK `). Проверка количества извлечённых текстовых файлов здесь ничего не говорит: сканировали единственный внешний архив.
+Первые проверки текста и упаковки можно делать на ПК; для тестов в реальной PS Vita-игре позже понадобится совместимая среда запуска или консоль.
 
-1. Проверьте, что игра ваша и запускается на самой PS Vita. Убедитесь, что архив взят из PS Vita PCSG00129, а не PSP.
-2. Откройте VitaShell на консоли и в `ux0:app/` **выделите каталог `PCSG00129`**, затем △ → Open decrypted. **Оставайтесь в этом режиме**.
-3. В VitaShell нажмите SELECT, предварительно выбрав FTP в настройках START, и перенесите `files/DATA.CPK` на ПК через FTP именно из открытого расшифрованного представления. Копирование microSD на ПК или распаковка PKG не гарантируют расшифровки PFS.
-4. Сохраните прежний локальный файл под другим именем и скопируйте новую версию в `work/original/data.cpk` — не меняйте оригинал на Vita.
-5. Повторно запустите `RESEARCH_WINDOWS.bat` (или `py -3 tools/diagnose_cpk.py work/original/data.cpk --report work/reports/header.json`). Если сигнатура опять не распознана, отправьте только `header.json` и способ получения файла для дальнейшего анализа.
-
-Отсутствие сигнатуры не доказывает PFS-шифрование: возможен иной контейнер или служебный заголовок. Не удаляйте первые байты вручную.
-
-Источник: [Vita3K — Using VitaShell to dump your own files](https://vita3k.org/quickstart); [VitaShell decrypted view](https://github.com/Cimmerian-Iter/Vita-troubleshooting-guide/blob/master/vitashell.md).
+Источники:
+- https://vita3k.org/quickstart
+- https://github.com/SuleMareVientu/PSVitaNPDRMDecryptor
+- https://github.com/motoharu-gosuto/psvpfstools
