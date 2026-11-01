@@ -104,7 +104,9 @@ def build(
         raise FileExistsError(f"Refusing to overwrite existing output: {out}")
     if out.parent.resolve() == archive.parent:
         raise ValueError("Choose an output folder separate from the decrypted game")
-    if archive.read_bytes()[:4] != b"CPK ":
+    with archive.open("rb") as header_file:
+        signature = header_file.read(4)
+    if signature != b"CPK ":
         raise ValueError("Not a decrypted CPK archive (missing CPK magic)")
     if not patched_ssb.stat().st_size or patched_ssb.suffix.lower() != ".ssb":
         raise ValueError("Patched input must be a nonempty SSB file")
