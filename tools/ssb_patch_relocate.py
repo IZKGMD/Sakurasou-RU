@@ -18,7 +18,6 @@ import json
 from pathlib import Path
 import struct
 
-from fnt_inspect import FNTFont
 
 MARKERS = "▼▽"
 DEFAULT_OUTPUT = Path("work/patches/SCN_CJIN_relocated.ssb")
@@ -44,7 +43,7 @@ def references(data: bytes, offset: int, scan_end: int) -> list[int]:
 
 
 def build(data: bytes, rows: list[dict], *, expected_sha: str | None = None,
-          fonts: list[FNTFont] | None = None) -> tuple[bytes, dict]:
+          fonts: list[object] | None = None) -> tuple[bytes, dict]:
     if expected_sha and sha256(data).lower() != expected_sha.lower():
         raise ValueError("Original SSB SHA256 mismatch")
     if len(data) % 4:
@@ -182,9 +181,14 @@ def main(argv=None) -> int:
             raise ValueError("Input must be .ssb")
         with args.csv.open(encoding="utf-8-sig", newline="") as f:
             rows = list(csv.DictReader(f))
+        if args.font:
+            from fnt_inspect import FNTFont
+            font_objects = [FNTFont(f) for f in args.font]
+        else:
+            font_objects = []
         new_data, report = build(
             args.ssb.read_bytes(), rows, expected_sha=args.expected_sha,
-            fonts=[FNTFont(f) for f in args.font],
+            fonts=font_objects,
         )
         if not args.apply:
             print(
