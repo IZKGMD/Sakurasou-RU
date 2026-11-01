@@ -35,3 +35,32 @@ class TriageTests(unittest.TestCase):
 
 if __name__ == '__main__':
     unittest.main()
+
+
+from diagnose_cpk import inspect_header
+
+class CpkHeaderTests(unittest.TestCase):
+    def test_standard_cpk(self):
+        with tempfile.TemporaryDirectory() as d:
+            path=Path(d)/'DATA.CPK'
+            path.write_bytes(b'CPK '+b'\x00'*100)
+            report=inspect_header(path)
+            self.assertEqual(report['status'], 'standard_cpk')
+            self.assertEqual(report['cpk_signature_offset_first_4096'], 0)
+
+    def test_nonstandard_header(self):
+        with tempfile.TemporaryDirectory() as d:
+            path=Path(d)/'DATA.CPK'
+            path.write_bytes(bytes(range(32))+b'\x7f'*200)
+            report=inspect_header(path)
+            self.assertEqual(report['status'], 'unknown_header_possibly_encrypted')
+            self.assertIsNone(report['cpk_signature_offset_first_4096'])
+            self.assertEqual(len(report['first_32_bytes_hex'].split()), 32)
+
+    def test_prefixed_cpk(self):
+        with tempfile.TemporaryDirectory() as d:
+            path=Path(d)/'DATA.CPK'
+            path.write_bytes(b'XXXX'*4+b'CPK '+b'\x00'*30)
+            report=inspect_header(path)
+            self.assertEqual(report['cpk_signature_offset_first_4096'],16)
+            self.assertEqual(report['status'], 'cpk_signature_at_nonzero_offset')
