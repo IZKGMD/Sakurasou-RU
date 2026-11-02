@@ -20,7 +20,7 @@ from ssb_extract import extract as extract_ssb
 
 SCRIPT = {".ssb"}
 TEXT_TABLES = {".cmed", ".tipd", ".tmd", ".slpd", ".tskd", ".tskt"}
-GRAPHICS = {".txg", ".txgtl", ".cbg", ".csu", ".loc", ".gxt", ".dds"}
+GRAPHICS = {".txg", ".txgtl", ".cbg", ".csu", ".loc", ".gxt", ".gxttl", ".txgtl", ".dds"}
 FONTS = {".fnt"}
 VIDEO = {".pmf", ".usm", ".mp4", ".m2v"}
 AUDIO = {".awb", ".adx", ".hca", ".at9", ".wav"}
@@ -131,7 +131,26 @@ def audit_root(root: Path, archive: str, manifests: dict, *, export: Path | None
                                 writer.writeheader()
                                 writer.writerows(records)
                 except ValueError as e:
-                    notes.append(f"unknown_script_variant:{str(e)[:65]}")
+                    # SCR_*/script_* have different command layouts from SCN_*.
+                    # Export any discoverable Japanese as unverified candidates,
+                    # but NEVER treat these raw offsets as patch-safe.
+                    try:
+                        records, _ = extract_ssb(data, scope="all")
+                        candidates = len(records)
+                        notes.append("nonstory_ssb_unverified_offsets")
+                        if export is not None and records:
+                            csv_path = export / archive / rel.with_suffix(".csv")
+                            if csv_path.exists():
+                                notes.append("existing_local_csv_preserved")
+                            else:
+                                csv_path.parent.mkdir(parents=True, exist_ok=True)
+                                fields = list(records[0])
+                                with csv_path.open("w", encoding="utf-8-sig", newline="") as fp:
+                                    writer = csv.DictWriter(fp, fieldnames=fields)
+                                    writer.writeheader()
+                                    writer.writerows(records)
+                    except ValueError:
+                        notes.append(f"unknown_script_variant:{str(e)[:65]}")
             if translations:
                 digest = hashlib.sha256(data).hexdigest()
                 recognized = [m for m in translations if m["sha"] == digest]
@@ -142,7 +161,9 @@ def audit_root(root: Path, archive: str, manifests: dict, *, export: Path | None
         elif not readable and cat in ("script", "text_or_configuration", "unknown_review_required"):
             notes.append("oversize_binary_skipped_heuristics")
         if cat == "script":
-            status = "translation_manifest_exists_needs_runtime_review" if matched else "needs_translation"
+            status = ("needs_structural_analysis_before_patch"
+                      if "nonstory_ssb_unverified_offsets" in notes else
+                      "translation_manifest_exists_needs_runtime_review" if matched else "needs_translation")
         elif cat == "text_or_configuration":
             status = "needs_format_analysis_and_translation"
         elif cat == "texture_or_graphics":
