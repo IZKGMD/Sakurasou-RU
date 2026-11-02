@@ -21,7 +21,7 @@ def scene():
 
 class CompleteAuditTests(unittest.TestCase):
     def test_format_coverage(self):
-        for ext in (".txg",".txgtl",".cbg",".csu",".loc"):
+        for ext in (".txg",".txgtl",".gxttl",".cbg",".csu",".loc"):
             self.assertEqual(category_for(ext),"texture_or_graphics")
         for ext in (".cmed",".tipd",".tmd",".slpd",".tskd",".tskt"):
             self.assertEqual(category_for(ext),"text_or_configuration")
@@ -61,6 +61,19 @@ class CompleteAuditTests(unittest.TestCase):
             self.assertEqual(summary["assets_per_archive"],{"DATA":1,"STRM":1})
             with self.assertRaises(FileExistsError):
                 run(args)
+    def test_nonstory_ssb_exported_but_not_patch_ready(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root=Path(tmp)
+            source=root/"assets"
+            source.mkdir()
+            data=b"\x00" * 16 + "メニュー日本語▼".encode("utf-8") + b"\x00" * 8
+            (source/"script_system_status.ssb").write_bytes(data)
+            rows=audit_root(source,"DATA",{},export=root/"translations")
+            self.assertEqual(len(rows),1)
+            self.assertEqual(rows[0]["translation_status"],"needs_structural_analysis_before_patch")
+            self.assertIn("nonstory_ssb_unverified_offsets",rows[0]["notes"])
+            self.assertTrue((root/"translations"/"DATA"/"script_system_status.csv").exists())
+
     def test_known_manifest_hash_matches_only_its_source(self):
         with tempfile.TemporaryDirectory() as tmp:
             root=Path(tmp)
