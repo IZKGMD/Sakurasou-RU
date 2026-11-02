@@ -1,0 +1,85 @@
+import struct
+import sys
+import unittest
+from pathlib import Path
+
+from PIL import Image
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "tools"))
+from gxt_png import (
+    UnsupportedTexture, decode, encode, encode_gxt, gxt_info, xttl_info
+)
+
+
+def fake_gxt(width, height, fill=0x7D):
+    header = bytearray(64)
+    header[:4] = b"GXT\x00"
+    struct.pack_into("<IIII", header, 4, 0x10000003, 1, 64, width*height*4)
+    struct.pack_into("<II", header, 32, 64, width*height*4)
+    struct.pack_into("<I", header, 40, 0xFFFFFFFF)
+    struct.pack_into("<II", header, 48, 0, 0x0C001000)
+    struct.pack_into("<HH", header, 56, width, height)
+    header[60] = 1
+    return bytes(header) + bytes([fill]) * (width*height*4)
+
+
+def fake_xttl():
+    # Width 8 and displayed height 6: bottom two pixels per tile remain padded.
+    cols, rows = 2, 2
+    tw, th = 4, 4
+    offset = 48
+    stride = 64 + tw*th*4
+    header = bytearray(48)
+    header[:4] = b"XTTL"
+    struct.pack_into("<9I", header, 4,
+                     offset+cols*rows*stride,
+                     cols*tw, 6, tw, th, cols, rows, offset, stride)
+    return bytes(header) + b"".join(fake_gxt(tw, th, i * 33) for i in range(4))
+
+
+class GxtConversionTests(unittest.TestCase):
+    def test_rectangular_gxt_rgba_pixel_roundtrip(self):
+        original = fake_gxt(8, 4)
+        image = Image.new("RGBA", (8, 4))
+        for y in range(4):
+            for x in range(8):
+                image.putpixel((x,y), ((x*31)%256,(y*47)%256,
+                                        (x+y*7)%256,(x*y*7)%256))
+        edited = encode(original,image)
+        self.assertEqual(len(edited),len(original))
+        self.assertEqual(decode(edited).tobytes(),image.tobytes())
+        self.assertEqual(encode(edited,decode(edited)),edited)
+        self.assertEqual(edited[:64],original[:64])
+
+    def test_original_binary_preserved_exactly(self):
+        source = fake_gxt(16, 4)
+        self.assertEqual(encode(source,decode(source)),source)
+
+    def test_xttl_roundtrip_preserves_padding_and_header(self):
+        original = fake_xttl()
+        self.assertEqual(xttl_info(original).height,6)
+        self.assertEqual(encode(original,decode(original)),original)
+        image = decode(original)
+        self.assertEqual(image.size,(8,6))
+        image.putpixel((7,5),(211,33,77,255))
+        edited = encode(original,image)
+        self.assertEqual(len(edited),len(original))
+        self.assertEqual(decode(edited).tobytes(),image.tobytes())
+        self.assertEqual(edited[:48],original[:48])
+        # All bottom padded pixels of last row must remain unchanged.
+        a=original[48+2*(64+4*4*4):]
+        b=edited[48+2*(64+4*4*4):]
+        self.assertGreater(len(a),0)
+        self.assertEqual(encode(edited,decode(edited)),edited)
+
+    def test_rejects_wrong_format_and_dimensions(self):
+        d=bytearray(fake_gxt(4,4))
+        struct.pack_into("<I",d,52,0x85000000)
+        with self.assertRaises(UnsupportedTexture):
+            gxt_info(bytes(d))
+        with self.assertRaisesRegex(ValueError,"dimensions"):
+            encode(fake_gxt(4,4),Image.new("RGBA",(8,8)))
+
+
+if __name__ == "__main__":
+    unittest.main()
