@@ -37,6 +37,23 @@ class BatchTests(unittest.TestCase):
             self.assertTrue((out/"ok.gxt.png").is_file())
             with self.assertRaises(FileExistsError):
                 inspect(src,export=out)
+
+    def test_all_graphics_flag_includes_loc_and_nested_containers(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root=Path(tmp)
+            source=root/"assets";source.mkdir()
+            loc=source/"japanese.loc"
+            loc.write_bytes(fake_gxt(8,4))
+            # Unknown wrapper: included but marked unsupported, not silently skipped.
+            (source/"sample.csu").write_bytes(b"BAD WRAPPER")
+            (source/"sample.cbg").write_bytes(b"BAD BG")
+            expanded=inspect(source,all_graphics=True)
+            self.assertEqual(len(expanded),3)
+            self.assertEqual(sum(x["status"]=="decoded_supported" for x in expanded),1)
+            self.assertEqual(sum(x["status"]=="unsupported" for x in expanded),2)
+            legacy=inspect(source,all_graphics=False)
+            self.assertEqual(legacy,[])
+
     def test_no_assets(self):
         with tempfile.TemporaryDirectory() as tmp:
             with self.assertRaises(FileNotFoundError):
