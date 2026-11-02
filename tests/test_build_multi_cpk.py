@@ -45,7 +45,7 @@ class MultiCpkTests(unittest.TestCase):
                 inp, entry, replacement, name=args
                 stage=Path(cwd)/name
                 self.assertEqual(Path(name).name,name)
-                state=dict(states[str(Path(inp).resolve())])
+                state=dict(states.get(str(Path(inp).resolve()), {}))
                 state[entry]=Path(replacement).read_bytes()
                 stage.write_bytes(b"CPK "+b"\x00"*64)
                 states[str(stage.resolve())]=state
