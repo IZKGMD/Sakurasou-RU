@@ -72,6 +72,62 @@ class GxtConversionTests(unittest.TestCase):
         self.assertGreater(len(a),0)
         self.assertEqual(encode(edited,decode(edited)),edited)
 
+    def test_p8_palette_roundtrip_and_new_color(self):
+        header=bytearray(fake_gxt(8,4))
+        w,h=8,4
+        header=header[:64]
+        struct.pack_into("<II",header,12,64,w*h+1024)
+        struct.pack_into("<II",header,32,64,w*h)
+        struct.pack_into("<I",header,40,0)
+        struct.pack_into("<I",header,52,0x95001000)
+        # The palette has duplicate colors in unused slots, like the game.
+        pixels=bytes([240+(i%16) for i in range(w*h)])
+        palette=bytearray(1024)
+        for i in range(256):
+            r,g,b,a=255,255,255,(i%16)*17
+            palette[i*4:i*4+4]=bytes((b,g,r,a))
+        raw=bytes(header)+pixels+bytes(palette)
+        self.assertEqual(encode(raw,decode(raw)),raw)
+        changed=decode(raw)
+        changed.putpixel((3,2),(23,45,67,200))
+        repacked=encode(raw,changed)
+        self.assertEqual(len(repacked),len(raw))
+        self.assertEqual(decode(repacked).tobytes(),changed.tobytes())
+        # Previous pixel colors remain untouched.
+        self.assertEqual(decode(repacked).getpixel((0,0)),decode(raw).getpixel((0,0)))
+
+    def test_xttl_padded_right_and_bottom(self):
+        cols,rows,tw,th=2,2,8,8
+        stride=64+tw*th*4
+        header=bytearray(48)
+        header[:4]=b"XTTL"
+        struct.pack_into("<9I",header,4,48+cols*rows*stride,13,11,tw,th,cols,rows,48,stride)
+        original=bytes(header)+b"".join(fake_gxt(tw,th,n*30) for n in range(cols*rows))
+        self.assertEqual(encode(original,decode(original)),original)
+        edit=decode(original)
+        edit.putpixel((12,10),(20,30,40,255))
+        modified=encode(original,edit)
+        self.assertEqual(decode(modified).tobytes(),edit.tobytes())
+        self.assertEqual(encode(modified,decode(modified)),modified)
+
+    def test_csu_cbg_nested_embedded_texture_with_trailing_metadata(self):
+        nested=fake_xttl()
+        for magic,version,offset,trailer in ((b"CSU\\x00",0x20,0x30,b"UNALTERED_TRAILER"),
+                                             (b"CBG\\x00",0x10,0x20,b"")):
+            # Backslashes in this string are escaped in the test source below.
+            magic=magic.replace(b"\\\\x00",b"\\x00")
+            prefix=bytearray(offset)
+            prefix[:4]=magic
+            struct.pack_into("<II",prefix,4,version,offset)
+            original=bytes(prefix)+nested+trailer
+            self.assertEqual(encode(original,decode(original)),original)
+            img=decode(original)
+            img.putpixel((2,1),(101,102,103,255))
+            rewritten=encode(original,img)
+            self.assertEqual(rewritten[:offset],original[:offset])
+            self.assertEqual(rewritten[offset+len(nested):],trailer)
+            self.assertEqual(decode(rewritten).tobytes(),img.tobytes())
+
     def test_rejects_wrong_format_and_dimensions(self):
         d=bytearray(fake_gxt(4,4))
         struct.pack_into("<I",d,52,0x85000000)
