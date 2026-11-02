@@ -112,10 +112,8 @@ class GxtConversionTests(unittest.TestCase):
 
     def test_csu_cbg_nested_embedded_texture_with_trailing_metadata(self):
         nested=fake_xttl()
-        for magic,version,offset,trailer in ((b"CSU\\x00",0x20,0x30,b"UNALTERED_TRAILER"),
-                                             (b"CBG\\x00",0x10,0x20,b"")):
-            # Backslashes in this string are escaped in the test source below.
-            magic=magic.replace(b"\\\\x00",b"\\x00")
+        for magic,version,offset,trailer in ((b"CSU"+bytes([0]),0x20,0x30,b"UNALTERED_TRAILER"),
+                                             (b"CBG"+bytes([0]),0x10,0x20,b"")):
             prefix=bytearray(offset)
             prefix[:4]=magic
             struct.pack_into("<II",prefix,4,version,offset)
