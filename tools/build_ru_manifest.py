@@ -58,7 +58,8 @@ def make_rows(original: bytes, manifest: dict) -> tuple[list[dict], Counter]:
     rows = []
     counts = Counter()
     dialogue_keys = set()
-    for offset, byte_count, source in iter_strings(original, boundary):
+    for item in iter_strings(original, boundary):
+        offset, byte_count, source = item["offset"], item["byte_len"], item["source"]
         key = f"0x{offset:08X}"
         if key in manifest["dialogues"]:
             kind = "dialogue"
