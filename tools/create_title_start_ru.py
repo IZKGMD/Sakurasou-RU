@@ -1,4 +1,8 @@
 #!/usr/bin/env python3
+# DEPRECATED: confirmed wrong title asset by Vita3K screenshots (2026-11-03).
+# title_start.gxt is an INTRO/splash asset, not the five main-menu buttons.
+# Generating this experimental "НАЧАТЬ" image produces broken spaced text.
+# Use restore_original_title.py instead and inspect title_parts.gxt/title_obj.gxttl.
 """Generate the FIRST EXPERIMENTAL Russian title-start texture locally.
 
 This file contains no commercial game assets or fonts.
