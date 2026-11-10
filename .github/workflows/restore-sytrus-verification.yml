@@ -1,0 +1,47 @@
+name: Restore Sytrus verification FLP
+
+on:
+  push:
+    branches:
+      - upload/sytrus-verification
+    paths:
+      - "downloads/IZKFLP-0.8.0-Sytrus-Verification.flp.xz"
+      - ".github/workflows/restore-sytrus-verification.yml"
+
+permissions:
+  contents: write
+
+jobs:
+  restore:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout test branch
+        uses: actions/checkout@v4
+        with:
+          ref: upload/sytrus-verification
+
+      - name: Decompress and verify FLP
+        run: |
+          python - <<'PY'
+          import hashlib
+          import lzma
+          from pathlib import Path
+
+          archive = Path("downloads/IZKFLP-0.8.0-Sytrus-Verification.flp.xz")
+          target = Path("downloads/IZKFLP-0.8.0-Sytrus-Verification.flp")
+          payload = lzma.decompress(archive.read_bytes())
+          expected = "147c623c44b4400a99765301633e8e02e589390770e78935cdbf426d71b41b7a"
+          actual = hashlib.sha256(payload).hexdigest()
+          if actual != expected:
+              raise SystemExit(f"SHA-256 mismatch: {actual}")
+          target.write_bytes(payload)
+          print(f"Restored {len(payload)} bytes; SHA-256 verified: {actual}")
+          PY
+
+      - name: Commit restored FLP
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add downloads/IZKFLP-0.8.0-Sytrus-Verification.flp
+          git commit -m "test: add Sytrus verification FLP"
+          git push origin HEAD:upload/sytrus-verification
